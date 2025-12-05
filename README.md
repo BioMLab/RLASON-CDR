@@ -34,8 +34,8 @@ Cell features:
 
 Drug features:
 * `ecfp_encoding.pkl`: Extended Connectivity Fingerprint for drugs.
-* `pubchem_encoding.pkl`: PubChem Substructure Fingerprint for drugs.
 * `espf_encoding.pkl`: Explainable Substructure Partition Fingerprint for drugs.
+* `pubchem_encoding.pkl`: PubChem Substructure Fingerprint for drugs.
 * `drug_feat_atom.pkl`: Atom-level 3D geometry features represented as molecular graphs for drugs.
 * `drug_feat_bond.pkl`: Bond-level 3D geometry features including bond angles and connectivity for drugs.
 
@@ -48,4 +48,4 @@ Drug features:
 * `utils.py`: This function contains the necessary processing subroutines.
 
 ## Hyperparameter configuration
-The `config.py` defines the tuned hyperparameters used in our experiments, including the basic training settings (`epochs`, `lr`, `weight_decay`, `batch_size`), the architecture and regularization parameters for the HDATN module, the HAN-GCN module, as well as the PPO-related coefficients (`clip_epsilon`, `ppo_epochs`, `entropy_weight`, `bce_coef`, `policy_coef`, `value_coef`) for collaborative optimization.
+The `config.py` defines the tuned hyperparameters used in our experiments, including the basic training settings (`epochs`, `lr`, `weight_decay`, `batch_size`), the architecture and regularization parameters for the HDAN module, the HGCN module, as well as the PPO-related coefficients (`clip_epsilon`, `ppo_epochs`, `entropy_weight`, `bce_coef`, `policy_coef`, `value_coef`) for collaborative optimization.

@@ -20,7 +20,7 @@ def create_cell_feature(save_path="GDSC/cell/"):
     exp_df = pd.read_csv("GDSC/cell/genomic_expression_561celllines_697genes_demap_features.csv")
     meth_df = pd.read_csv("GDSC/cell/genomic_methylation_561celllines_808genes_demap_features.csv")
     mut_df = pd.read_csv("GDSC/cell/genomic_mutation_561celllines_34673genes_demap_features.csv")
-    pathway_df = pd.read_csv("../../GDSC/cell/GDSC_pathway.csv")
+    pathway_df = pd.read_csv("GDSC/cell/GDSC_pathway.csv")
     
     exp_df.set_index(exp_df.columns[0], inplace=True)
     meth_df.set_index(meth_df.columns[0], inplace=True)
@@ -155,11 +155,11 @@ def create_drug_fingerprint(save_path="GDSC/drug"):
     with open(save_path + "ecfp_encoding.pkl", "wb") as f:
         pickle.dump(drug_ecfp, f)
 
-    with open(save_path + "pubchem_encoding.pkl", "wb") as f:
-        pickle.dump(drug_pubchem, f)
-
     with open(save_path + "espf_encoding.pkl", "wb") as f:
         pickle.dump(drug_espf, f)
+
+    with open(save_path + "pubchem_encoding.pkl", "wb") as f:
+        pickle.dump(drug_pubchem, f)
 
 
 allowable_atom_features = {

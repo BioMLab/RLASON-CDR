@@ -59,7 +59,7 @@ def features_to_sparse(features, device):
     return out_features
 
 
-def HANGCN_data_preprocess(train_set, all_pairs):
+def HGCN_data_preprocess(train_set, all_pairs):
     train_set = train_set.dropna().copy()
     train_set["Drug_ID"] = train_set["Drug_ID"].astype(str)
     train_set["Cell_ID"] = train_set["Cell_ID"].astype(str)

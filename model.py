@@ -51,7 +51,7 @@ def get_bond_feature_int_dims1():
 class atom_embedding_net(nn.Module):
     def __init__(self, args):
         super(atom_embedding_net, self).__init__()
-        self.embed_dim = args.HDATN_embed_dim
+        self.embed_dim = args.HDAN_embed_dim
         self.atom_embedding = nn.ModuleList()
         self.num_atom_feature = len(get_atom_int_feature_dims1())
         for i in range(self.num_atom_feature):
@@ -68,7 +68,7 @@ class atom_embedding_net(nn.Module):
 class bond_embedding_net(nn.Module):
     def __init__(self, args):
         super(bond_embedding_net, self).__init__()
-        self.embed_dim = args.HDATN_embed_dim
+        self.embed_dim = args.HDAN_embed_dim
         self.bond_embedding = nn.ModuleList()
         self.num_bond_feature = len(get_bond_feature_int_dims1())
         for i in range(self.num_bond_feature):
@@ -85,7 +85,7 @@ class bond_embedding_net(nn.Module):
 class Drug_3d_Encoder(nn.Module):
     def __init__(self, args):
         super(Drug_3d_Encoder, self).__init__()
-        self.embed_dim = args.HDATN_embed_dim
+        self.embed_dim = args.HDAN_embed_dim
         self.dropout_rate = args.dropout_ratio_drug_3D
         self.layer_num = args.layer_num_3D_drug
         self.readout = args.readout
@@ -164,7 +164,7 @@ class Drug_3d_Encoder(nn.Module):
 class drug_hier_encoder(nn.Module):
     def __init__(self, args):
         super().__init__()
-        self.embed_dim = args.HDATN_embed_dim
+        self.embed_dim = args.HDAN_embed_dim
         self.drug_3d = Drug_3d_Encoder(args)
         self.drug_3d_dim = self.drug_3d.output_dim
         self.drug_3d_dense = nn.Linear(self.drug_3d_dim, 1024)
@@ -183,7 +183,7 @@ class drug_hier_encoder(nn.Module):
         return drug_repr
 
 
-class HDATN(nn.Module):
+class HDAN(nn.Module):
     def __init__(self, embed_dim, num_heads=64, dropout=0.1):
         super().__init__()
         self.embed_dim = embed_dim
@@ -216,50 +216,50 @@ class HDATN(nn.Module):
         self.norm_final = nn.LayerNorm(embed_dim)
 
     def forward(self, x_drug, x_cell):
-        x_d = x_drug.permute(1, 0, 2)  # [4, B, D]
+        x_d = x_drug.permute(1, 0, 2)
         x_d_attn_out, drug_intra_attn_w = self.intra_attn[0](x_d, x_d, x_d)
-        x_d = x_d_attn_out.permute(1, 0, 2)  # [B, 4, D]
+        x_d = x_d_attn_out.permute(1, 0, 2)
 
-        x_c = x_cell.permute(1, 0, 2)  # [4, B, D]
+        x_c = x_cell.permute(1, 0, 2)
         x_c_attn_out, cell_intra_attn_w = self.intra_attn[1](x_c, x_c, x_c)
-        x_c = x_c_attn_out.permute(1, 0, 2)  # [B, 4, D]
+        x_c = x_c_attn_out.permute(1, 0, 2)
 
-        drug_pool = x_d.mean(dim=1)  # [B, D]
-        cell_pool = x_c.mean(dim=1)  # [B, D]
+        drug_pool = x_d.mean(dim=1)
+        cell_pool = x_c.mean(dim=1)
 
-        q_d = x_d.permute(1, 0, 2)  # [4, B, D]
-        k_c = x_c.permute(1, 0, 2)  # [4, B, D]
-        v_c = k_c                  # [4, B, D]
+        q_d = x_d.permute(1, 0, 2)
+        k_c = x_c.permute(1, 0, 2)
+        v_c = k_c
         x_d2c_out, cross_attn_d2c_w = self.cross_attn_d2c(q_d, k_c, v_c)
-        x_d2c = x_d2c_out.permute(1, 0, 2)  # [B, 4, D]
+        x_d2c = x_d2c_out.permute(1, 0, 2)
 
-        q_c = x_c.permute(1, 0, 2)  # [4, B, D]
-        k_d = x_d.permute(1, 0, 2)  # [4, B, D]
-        v_d = k_d                  # [4, B, D]
+        q_c = x_c.permute(1, 0, 2)
+        k_d = x_d.permute(1, 0, 2)
+        v_d = k_d
         x_c2d_out, cross_attn_c2d_w = self.cross_attn_c2d(q_c, k_d, v_d)
-        x_c2d = x_c2d_out.permute(1, 0, 2)  # [B, 4, D]
+        x_c2d = x_c2d_out.permute(1, 0, 2)
 
-        drug2cell_pool = x_d2c.mean(dim=1)  # [B, D]
-        cell2drug_pool = x_c2d.mean(dim=1)  # [B, D]
+        drug2cell_pool = x_d2c.mean(dim=1)
+        cell2drug_pool = x_c2d.mean(dim=1)
 
-        gate = self.cross_gate(torch.cat([drug_pool, cell_pool], dim=-1))  # [B, 2D]
-        g1, g2 = gate.chunk(2, dim=-1)  # [B, D]
-        gated_d2c = drug2cell_pool * g1  # [B, D]
-        gated_c2d = cell2drug_pool * g2  # [B, D]
+        gate = self.cross_gate(torch.cat([drug_pool, cell_pool], dim=-1))
+        g1, g2 = gate.chunk(2, dim=-1)
+        gated_d2c = drug2cell_pool * g1
+        gated_c2d = cell2drug_pool * g2
 
-        fused = gated_d2c + gated_c2d  # [B, D]
-        fused = self.fusion_proj(fused)  # [B, D]
+        fused = gated_d2c + gated_c2d
+        fused = self.fusion_proj(fused)
 
-        combined = fused + drug_pool + cell_pool  # [B, D]
-        final_feat = self.norm_final(combined)    # [B, D]
+        combined = fused + drug_pool + cell_pool
+        final_feat = self.norm_final(combined)
 
         return final_feat
 
 
-class HDATN_model(nn.Module):
+class HDAN_model(nn.Module):
     def __init__(self, args):
-        super(HDATN_model, self).__init__()
-        self.embed_dim = args.HDATN_embed_dim
+        super(HDAN_model, self).__init__()
+        self.embed_dim = args.HDAN_embed_dim
 
         self.ecfp_fc1 = nn.Linear(2048, 1024)
         self.ecfp_fc2 = nn.Linear(1024, self.embed_dim)
@@ -302,10 +302,10 @@ class HDATN_model(nn.Module):
         self.batch_path = nn.BatchNorm1d(512)
         self.path_dropout = nn.Dropout(0.2)
 
-        self.fusion = HDATN(
+        self.fusion = HDAN(
             embed_dim=self.embed_dim,
-            num_heads=args.HDATN_heads,
-            dropout=args.HDATN_dropout
+            num_heads=args.HDAN_heads,
+            dropout=args.HDAN_dropout
         )
 
         self.predict = nn.Sequential(
@@ -424,14 +424,14 @@ class NeighborInteractionAugmentor(nn.Module):
         return enhanced_features, alpha
 
 
-class HANGCN(nn.Module):
+class HGCN(nn.Module):
     def __init__(self, args, feature_number, device=device):
         super().__init__()
         self.feature_number = feature_number
-        self.hops = args.HANGCN_hops
-        self.embed_dim = args.HANGCN_embed_dim
-        self.hidden_dim = args.HANGCN_hidden_dim
-        self.dropout = args.HANGCN_dropout
+        self.hops = args.HGCN_hops
+        self.embed_dim = args.HGCN_embed_dim
+        self.hidden_dim = args.HGCN_hidden_dim
+        self.dropout = args.HGCN_dropout
         self.device = device
 
         self.multi_hop_gcn = MultiHopGCNLayer(
@@ -520,10 +520,10 @@ class ValueNetwork(nn.Module):
 
 
 class RLASON_CDR(nn.Module):
-    def __init__(self, HDATN_model, HANGCN_model, propagation_matrix, features, policy_net, value_net) -> None:
+    def __init__(self, HDAN_model, HGCN_model, propagation_matrix, features, policy_net, value_net) -> None:
         super().__init__()
-        self.HDATN_model = HDATN_model
-        self.HANGCN_model = HANGCN_model
+        self.HDAN_model = HDAN_model
+        self.HGCN_model = HGCN_model
         self.propagation_matrix = propagation_matrix
         self.features = features
         self.policy_net = policy_net
@@ -533,8 +533,8 @@ class RLASON_CDR(nn.Module):
     def forward(self, drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond,
                 cell_exp, cell_meth, cell_mut, cell_path, idx1, idx2):
         pred1, fusion_feat, drug_intra_attn_w, cell_intra_attn_w, cross_attn_d2c_w, cross_attn_c2d_w = \
-            self.HDATN_model(drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, cell_exp, cell_meth, cell_mut, cell_path)
-        pred2, hangcn_fused = self.HANGCN_model(self.propagation_matrix, self.features, (idx1, idx2))
+            self.HDAN_model(drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, cell_exp, cell_meth, cell_mut, cell_path)
+        pred2, HGCN_fused = self.HGCN_model(self.propagation_matrix, self.features, (idx1, idx2))
 
         state = torch.cat([pred1, pred2], dim=1)
 

@@ -49,7 +49,7 @@ def train(model, loader, criterion, opt, device,
 
             entropy = dist_new.entropy().mean()
             entropy_total += entropy
-            policy_loss_total = policy_loss - entropy_weight * entropy
+            policy_loss_total += policy_loss - entropy_weight * entropy
 
         loss = bce_coef * bce_loss + policy_coef * policy_loss_total + value_coef * value_loss
 
@@ -97,15 +97,15 @@ if __name__ == "__main__":
     all_pairs, drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, cell_exp, cell_meth, cell_mut, cell_path = LoadData()
 
     train_set, test_set = process(all_pairs)
-    propagation_matrix, features, idx_map = HANGCN_data_preprocess(train_set, all_pairs)
+    propagation_matrix, features, idx_map = HGCN_data_preprocess(train_set, all_pairs)
     feature_number = features["dimensions"][1]
 
     policy_net = PolicyNetwork().to(device)
     value_net = ValueNetwork().to(device)
 
-    HDATN_model = HDATN_model(args).to(device)
-    HANGCN_model = HANGCN(args, feature_number).to(device)
-    model = RLASON_CDR(HDATN_model, HANGCN_model, propagation_matrix, features, policy_net, value_net).to(device)
+    HDAN_model = HDAN_model(args).to(device)
+    HGCN_model = HGCN(args, feature_number).to(device)
+    model = RLASON_CDR(HDAN_model, HGCN_model, propagation_matrix, features, policy_net, value_net).to(device)
 
     criterion = nn.BCELoss()
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
