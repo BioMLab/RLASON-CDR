@@ -96,45 +96,46 @@ if __name__ == "__main__":
 
     all_pairs, drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, cell_exp, cell_meth, cell_mut, cell_path = LoadData()
 
-    train_set, test_set = process(all_pairs)
-    propagation_matrix, features, idx_map = HGCN_data_preprocess(train_set, all_pairs)
-    feature_number = features["dimensions"][1]
+    for fold in range(5):
+        train_set, test_set = process_cv(all_pairs, fold=fold, n_splits=5, random=31)
+        propagation_matrix, features, idx_map = HGCN_data_preprocess(train_set, all_pairs)
+        feature_number = features["dimensions"][1]
 
-    policy_net = PolicyNetwork().to(device)
-    value_net = ValueNetwork().to(device)
+        policy_net = PolicyNetwork().to(device)
+        value_net = ValueNetwork().to(device)
 
-    HDAN_model = HDAN_model(args).to(device)
-    HGCN_model = HGCN(args, feature_number).to(device)
-    model = RLASON_CDR(HDAN_model, HGCN_model, propagation_matrix, features, policy_net, value_net).to(device)
+        HDAN_model = HDAN_model(args).to(device)
+        HGCN_model = HGCN(args, feature_number).to(device)
+        model = RLASON_CDR(HDAN_model, HGCN_model, propagation_matrix, features, policy_net, value_net).to(device)
 
-    criterion = nn.BCELoss()
-    opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    best_AUC, best_AUPR, best_F1, best_ACC, best_recall, best_precision, best_AP, best_MCC = [0] * 8
-    train_loader, test_loader = create_loader(train_set, test_set, drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, cell_exp, cell_meth, cell_mut, cell_path, idx_map, args)
+        criterion = nn.BCELoss()
+        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        best_AUC, best_AUPR, best_F1, best_ACC, best_recall, best_precision, best_AP, best_MCC = [0] * 8
+        train_loader, test_loader = create_loader(train_set, test_set, drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, cell_exp, cell_meth, cell_mut, cell_path, idx_map, args)
 
-    for epoch in range(1, args.epochs + 1):
-        print(f"===== epoch {epoch} =====")
+        for epoch in range(1, args.epochs + 1):
+            print(f"===== epoch {epoch} =====")
 
-        train(model, test_loader, criterion, opt, device,
-              clip_epsilon=args.clip_epsilon, ppo_epochs=args.ppo_epochs, entropy_weight=args.entropy_weight,
-              bce_coef=args.bce_coef, policy_coef=args.policy_coef, value_coef=args.value_coef)
-        AUC, AUPR, F1, ACC, recall, precision, AP, MCC = test(model, test_loader, device)
+            train(model, test_loader, criterion, opt, device,
+                  clip_epsilon=args.clip_epsilon, ppo_epochs=args.ppo_epochs, entropy_weight=args.entropy_weight,
+                  bce_coef=args.bce_coef, policy_coef=args.policy_coef, value_coef=args.value_coef)
+            AUC, AUPR, F1, ACC, recall, precision, AP, MCC = test(model, test_loader, device)
 
-        if AUC > best_AUC:
-            best_AUC = AUC
-            best_AUPR = AUPR
-            best_F1 = F1
-            best_ACC = ACC
-            best_recall = recall
-            best_precision = precision
-            best_AP = AP
-            best_MCC = MCC
+            if AUC > best_AUC:
+                best_AUC = AUC
+                best_AUPR = AUPR
+                best_F1 = F1
+                best_ACC = ACC
+                best_recall = recall
+                best_precision = precision
+                best_AP = AP
+                best_MCC = MCC
 
-        print("best_AUC: " + str(round(best_AUC, 4)) +
-              "  best_AUPR: " + str(round(best_AUPR, 4)) +
-              "  best_F1: " + str(round(best_F1, 4)) +
-              "  best_ACC: " + str(round(best_ACC, 4)) +
-              "  best_precision: " + str(round(best_precision, 4)) +
-              "  best_MCC: " + str(round(best_MCC, 4)))
-        print("---------------------------------------")
+            print("best_AUC: " + str(round(best_AUC, 4)) +
+                  "  best_AUPR: " + str(round(best_AUPR, 4)) +
+                  "  best_F1: " + str(round(best_F1, 4)) +
+                  "  best_ACC: " + str(round(best_ACC, 4)) +
+                  "  best_precision: " + str(round(best_precision, 4)) +
+                  "  best_MCC: " + str(round(best_MCC, 4)))
+            print("---------------------------------------")
 

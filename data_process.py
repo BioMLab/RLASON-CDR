@@ -74,11 +74,47 @@ def collate_fn(samples):
     )
 
 
-def process(all_pairs):
-    train_index, test_index = train_test_split(range(len(all_pairs)), test_size=0.1, shuffle=True, random_state=42)
+def process_cv(all_pairs, fold=0, n_splits=5, random=31):
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random)
+    indices = list(kf.split(all_pairs))
 
-    train_set = all_pairs.loc[train_index].reset_index(drop=True)
-    test_set = all_pairs.loc[test_index].reset_index(drop=True)
+    train_idx, test_idx = indices[fold]
+    train_set = all_pairs.iloc[train_idx].reset_index(drop=True)
+    test_set = all_pairs.iloc[test_idx].reset_index(drop=True)
+
+    return train_set, test_set
+
+
+def process_cell_cold_start_cv(all_pairs, fold=0, n_splits=5, random=31):
+    unique_cells = np.array(all_pairs["Cell_ID"].unique())
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random)
+
+    cell_splits = list(kf.split(unique_cells))
+    train_cells_idx, test_cells_idx = cell_splits[fold]
+
+    train_cells = unique_cells[train_cells_idx]
+    test_cells = unique_cells[test_cells_idx]
+
+    # 根据 cell 划分样本
+    train_set = all_pairs[all_pairs["Cell_ID"].isin(train_cells)].reset_index(drop=True)
+    test_set = all_pairs[all_pairs["Cell_ID"].isin(test_cells)].reset_index(drop=True)
+
+    return train_set, test_set
+
+
+def process_drug_cold_start_cv(all_pairs, fold=0, n_splits=5, random=31):
+    unique_drugs = np.array(all_pairs["Drug_ID"].unique())
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random)
+
+    drug_splits = list(kf.split(unique_drugs))
+    train_drugs_idx, test_drugs_idx = drug_splits[fold]
+
+    train_drugs = unique_drugs[train_drugs_idx]
+    test_drugs = unique_drugs[test_drugs_idx]
+
+    train_set = all_pairs[all_pairs["Drug_ID"].isin(train_drugs)].reset_index(drop=True)
+    test_set = all_pairs[all_pairs["Drug_ID"].isin(test_drugs)].reset_index(drop=True)
+
     return train_set, test_set
 
 
