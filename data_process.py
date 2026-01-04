@@ -95,7 +95,6 @@ def process_cell_cold_start_cv(all_pairs, fold=0, n_splits=5, random=31):
     train_cells = unique_cells[train_cells_idx]
     test_cells = unique_cells[test_cells_idx]
 
-    # 根据 cell 划分样本
     train_set = all_pairs[all_pairs["Cell_ID"].isin(train_cells)].reset_index(drop=True)
     test_set = all_pairs[all_pairs["Cell_ID"].isin(test_cells)].reset_index(drop=True)
 
