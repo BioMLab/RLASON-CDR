@@ -12,46 +12,44 @@ set_seed(31)
 
 
 def train(model, loader, criterion, opt, device,
-          clip_epsilon=0.3, ppo_epochs=5, entropy_weight=0.05,
+          clip_epsilon=0.3, entropy_weight=0.05,
           bce_coef=1.0, policy_coef=3.0, value_coef=1.0):
     model.train()
-
     for batch_idx, data in enumerate(tqdm(loader, desc="Training", ncols=100)):
-        drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, \
+        drug_morgan, drug_espf, drug_pubchem, drug_atom, drug_bond, \
         cell_exp, cell_meth, cell_mut, cell_path, \
         label, idx1, idx2 = [x.to(device) for x in data]
 
-        output, dist, state, log_prob, *_ = model(drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond,
-                                                  cell_exp, cell_meth, cell_mut, cell_path, idx1, idx2)
-        # ===== BCE Loss =====
+        output, dist, state = model(
+            drug_morgan, drug_espf, drug_pubchem, drug_atom, drug_bond,
+            cell_exp, cell_meth, cell_mut, cell_path, idx1, idx2
+        )
+
+        action = dist.sample()
+        log_prob = dist.log_prob(action)
+
         bce_loss = criterion(output, label.unsqueeze(1).float())
 
-        # ===== PPO =====
         reward = -bce_loss.detach()
 
-        # value loss
-        value_pred = model.value_net(state)
+        value_pred = model.value_net(state).squeeze()
+
         advantage = reward - value_pred.detach()
-        value_loss = (reward - value_pred).pow(2).mean()
 
-        # policy loss
-        old_log_prob = log_prob.detach()
-        policy_loss_total = 0
+        ratio = torch.exp(log_prob - log_prob.detach())
 
-        entropy_total = 0
-        for _ in range(ppo_epochs):
-            dist_new, new_log_prob = model.policy_net(state)
+        surr1 = ratio * advantage
+        surr2 = torch.clamp(ratio, 1 - clip_epsilon, 1 + clip_epsilon) * advantage
+        policy_loss = -torch.min(surr1, surr2).mean()
 
-            ratio = torch.exp(new_log_prob - old_log_prob)
-            surrogate1 = ratio * advantage
-            surrogate2 = torch.clamp(ratio, 1 - clip_epsilon, 1 + clip_epsilon) * advantage
-            policy_loss = -torch.min(surrogate1, surrogate2).mean()
+        value_loss = (value_pred - reward).pow(2).mean()
+              
+        entropy = dist.entropy().mean()
 
-            entropy = dist_new.entropy().mean()
-            entropy_total += entropy
-            policy_loss_total += policy_loss - entropy_weight * entropy
-
-        loss = bce_coef * bce_loss + policy_coef * policy_loss_total + value_coef * value_loss
+        loss = (bce_coef * bce_loss +
+                policy_coef * policy_loss +
+                value_coef * value_loss -
+                entropy_weight * entropy)
 
         opt.zero_grad()
         loss.backward()
@@ -117,7 +115,7 @@ if __name__ == "__main__":
             print(f"===== epoch {epoch} =====")
 
             train(model, test_loader, criterion, opt, device,
-                  clip_epsilon=args.clip_epsilon, ppo_epochs=args.ppo_epochs, entropy_weight=args.entropy_weight,
+                  clip_epsilon=args.clip_epsilon, entropy_weight=args.entropy_weight,
                   bce_coef=args.bce_coef, policy_coef=args.policy_coef, value_coef=args.value_coef)
             AUC, AUPR, F1, ACC, recall, precision, AP, MCC = test(model, test_loader, device)
 
