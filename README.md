@@ -48,4 +48,4 @@ Drug features:
 * `utils.py`: This function contains the necessary processing subroutines.
 
 ## Hyperparameter configuration
-The `config.py` defines the tuned hyperparameters used in our experiments, including the basic training settings (`epochs`, `lr`, `weight_decay`, `batch_size`), the architecture and regularization parameters for the HDAN module, the HGCN module, as well as the PPO-related coefficients (`clip_epsilon`, `ppo_epochs`, `entropy_weight`, `bce_coef`, `policy_coef`, `value_coef`) for collaborative optimization.
+The `config.py` defines the tuned hyperparameters used in our experiments, including the basic training settings, the architecture and regularization parameters for the HDAN module, the HGCN module, as well as the PPO-related coefficients for collaborative optimization.
