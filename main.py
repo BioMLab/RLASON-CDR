@@ -68,9 +68,8 @@ def test(model, loader, device):
             cell_exp, cell_meth, cell_mut, cell_path, \
             label, idx1, idx2 = [x.to(device) for x in data]
 
-            output, dist, state, log_prob, drug_intra_attn_w, cell_intra_attn_w, cross_attn_d2c_w, cross_attn_c2d_w = \
-                model(drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond,
-                      cell_exp, cell_meth, cell_mut, cell_path, idx1, idx2)
+            output, dist, state = model(drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond,
+                                        cell_exp, cell_meth, cell_mut, cell_path, idx1, idx2)
 
             y_true.append(label.unsqueeze(1))
             y_pred.append(output)
