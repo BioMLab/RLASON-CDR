@@ -338,7 +338,7 @@ class HDAN_model(nn.Module):
             drug_pubchem,
             self.drug_3D_encoder(drug_atom, drug_bond)
         ]
-        x_drug = torch.stack(drug_feats, dim=1)  # [B,4,D]
+        x_drug = torch.stack(drug_feats, dim=1)
 
         # Gene expression representation
         cell_exp = torch.tanh(self.exp_fc1(cell_exp))
@@ -376,7 +376,7 @@ class HDAN_model(nn.Module):
             cell_mut,
             cell_path
         ]
-        x_cell = torch.stack(cell_feats, dim=1)  # [B,4,D]
+        x_cell = torch.stack(cell_feats, dim=1)
 
         fusion_feat = self.fusion(x_drug, x_cell)
         output = self.predict(fusion_feat)
@@ -415,12 +415,12 @@ class NeighborInteractionAugmentor(nn.Module):
         self.device = device
 
     def forward(self, hop_features):
-        stacked = torch.stack(hop_features, dim=1)  # [N, H, D]
+        stacked = torch.stack(hop_features, dim=1)
 
-        scores = (stacked * self.attn_weights.unsqueeze(0)).sum(dim=-1)  # [N, H]
-        alpha = F.softmax(scores, dim=1).unsqueeze(-1)  # [N, H, 1]
+        scores = (stacked * self.attn_weights.unsqueeze(0)).sum(dim=-1)
+        alpha = F.softmax(scores, dim=1).unsqueeze(-1)
 
-        enhanced_features = (stacked * alpha).sum(dim=1)  # [N, D]
+        enhanced_features = (stacked * alpha).sum(dim=1)
         return enhanced_features, alpha
 
 
@@ -472,7 +472,7 @@ class HGCN(nn.Module):
         fused = F.dropout(fused, p=self.dropout, training=self.training)
         logits = self.decoder(fused)
 
-        return logits, fused
+        return logits
 
 
 class PolicyNetwork(nn.Module):
@@ -491,14 +491,12 @@ class PolicyNetwork(nn.Module):
         )
 
     def forward(self, state):
-        state = state.unsqueeze(0)  # [1, B, 2]
+        state = state.unsqueeze(0)
         attn_out, _ = self.attention(state, state, state)
-        logits = self.fc(attn_out.squeeze(0))  # [B, 2]
-
+        logits = self.fc(attn_out.squeeze(0))
         dist = Categorical(logits=logits)
-        log_prob = dist.logits.log_softmax(dim=-1)  # [B, 2]
 
-        return dist, log_prob
+        return dist
 
 
 class ValueNetwork(nn.Module):
@@ -532,13 +530,12 @@ class RLASON_CDR(nn.Module):
 
     def forward(self, drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond,
                 cell_exp, cell_meth, cell_mut, cell_path, idx1, idx2):
-        pred1, fusion_feat, drug_intra_attn_w, cell_intra_attn_w, cross_attn_d2c_w, cross_attn_c2d_w = \
-            self.HDAN_model(drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, cell_exp, cell_meth, cell_mut, cell_path)
-        pred2, HGCN_fused = self.HGCN_model(self.propagation_matrix, self.features, (idx1, idx2))
+        pred1 = self.HDAN_model(drug_ecfp, drug_espf, drug_pubchem, drug_atom, drug_bond, cell_exp, cell_meth, cell_mut, cell_path)
+        pred2 = self.HGCN_model(self.propagation_matrix, self.features, (idx1, idx2))
 
         state = torch.cat([pred1, pred2], dim=1)
 
-        dist, log_prob = self.policy_net(state)
+        dist = self.policy_net(state)
         weights = dist.probs
 
         w1 = weights[:, 0:1]
@@ -547,5 +544,5 @@ class RLASON_CDR(nn.Module):
         output = w1 * pred1 + w2 * pred2
         output = self.act(output)
 
-        return output, dist, state, log_prob, drug_intra_attn_w, cell_intra_attn_w, cross_attn_d2c_w, cross_attn_c2d_w
+        return output, dist, state
 
