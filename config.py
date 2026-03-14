@@ -22,11 +22,10 @@ def arg_parse():
     parser.add_argument("--HGCN_hidden_dim", type=int, default=64)
     parser.add_argument("--HGCN_dropout", type=float, default=0.1)
 
-    parser.add_argument("--clip_epsilon", type=float, default=0.3)
-    parser.add_argument("--ppo_epochs", type=int, default=5)
-    parser.add_argument("--entropy_weight", type=float, default=0.05)
+    parser.add_argument("--clip_epsilon", type=float, default=0.2)
+    parser.add_argument("--entropy_weight", type=float, default=0.01)
     parser.add_argument("--bce_coef", type=float, default=1.0)
-    parser.add_argument("--policy_coef", type=float, default=3.0)
-    parser.add_argument("--value_coef", type=float, default=1.0)
+    parser.add_argument("--policy_coef", type=float, default=1.0)
+    parser.add_argument("--value_coef", type=float, default=0.5)
 
     return parser.parse_args()
