@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import random
 import scipy.sparse as sp
-from sklearn.metrics import precision_recall_curve, roc_auc_score, average_precision_score, matthews_corrcoef
+from sklearn.metrics import precision_recall_curve, roc_auc_score, matthews_corrcoef
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -111,7 +111,6 @@ def metrics_graph(y_true, y_pred, num_thresholds=1000):
     precision_curve, recall_curve, thresholds_curve = precision_recall_curve(y_true, y_pred)
     aupr = -np.trapz(precision_curve, recall_curve)
     auc = roc_auc_score(y_true, y_pred)
-    ap = average_precision_score(y_true, y_pred)
 
     thresholds = np.linspace(0, 1, num=num_thresholds)
     y_true = y_true.reshape(1, -1)
@@ -125,7 +124,6 @@ def metrics_graph(y_true, y_pred, num_thresholds=1000):
     TN = y_true.shape[1] - TP - FP - FN
 
     precision = TP / (TP + FP + 1e-8)
-    recall = TP / (TP + FN + 1e-8)
     accuracy = (TP + TN) / y_true.shape[1]
     f1_score = 2 * TP / (2 * TP + FP + FN + 1e-8)
 
@@ -140,14 +138,11 @@ def metrics_graph(y_true, y_pred, num_thresholds=1000):
         "aupr": aupr,
         "f1": f1_score[best_idx],
         "accuracy": accuracy[best_idx],
-        "recall": recall[best_idx],
         "precision": precision[best_idx],
-        "ap": ap,
         "mcc": mcc
     }
 
     return (best_metrics["auc"], best_metrics["aupr"],
             best_metrics["f1"], best_metrics["accuracy"],
-            best_metrics["recall"], best_metrics["precision"],
-            best_metrics["ap"], best_metrics["mcc"])
+            best_metrics["precision"], best_metrics["mcc"])
 
